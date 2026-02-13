@@ -1,0 +1,13 @@
+
+
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.9.16-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+      RABBITMQ_LOGS: debug

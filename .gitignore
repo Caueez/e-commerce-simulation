@@ -5,4 +5,6 @@
 
 .env
 
-.egg-dist
+.egg-info
+
+.vscode/
