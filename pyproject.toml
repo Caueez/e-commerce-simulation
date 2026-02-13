@@ -11,4 +11,5 @@ dependencies = [
     "pydantic-settings",
     "aio-pika",
     "pytest",
+    "redis>=7.1.1",
 ]
