@@ -1,11 +1,13 @@
 
-from rabbit.connect import RabbitMQ
+from messaging.interface.messagering import MessageringInterface
 
 
 class Publisher:
-    def __init__(self, menssagering: RabbitMQ) -> None:
+    def __init__(self, menssagering: MessageringInterface, exchange_name: str, routing_key: str) -> None:
         self.menssagering = menssagering
+        self.exchange_name = exchange_name
+        self.routing_key = routing_key
     
-    async def publish(self, exchange_name: str, routing_key: str, message: dict) -> None:
-        await self.menssagering.publish(exchange_name, routing_key, message)
+    async def publish(self, message: dict) -> None:
+        await self.menssagering.publish(self.exchange_name, self.routing_key, message)
     

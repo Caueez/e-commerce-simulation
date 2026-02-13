@@ -2,9 +2,12 @@ import asyncio
 import json
 import aio_pika
 
-from aio_pika import Message, RobustConnection, RobustChannel, RobustExchange, RobustQueue, AMQPException
+from aio_pika import IncomingMessage, Message, RobustConnection, RobustChannel, RobustExchange, RobustQueue, AMQPException
 
-class RabbitMQ:
+from messaging.interface.messagering import MessageringInterface
+
+
+class RabbitMQ(MessageringInterface):
     def __init__(self, url: str) -> None:
         self._url = url
         self._connection : RobustConnection | None = None
@@ -28,37 +31,38 @@ class RabbitMQ:
     async def close(self) -> None:
         await self._connection.close()
 
-    async def create_channel(self, qos: int = 10) -> RobustChannel:
+    async def create_channel(self, qos: int = 10) -> None:
         if self._connection is None:
             raise Exception("Connection is not open")
         
         self._channel = await self._connection.channel()
         await self._channel.set_qos(prefetch_count=qos)
     
-    async def create_exchange(self, name: str, type: str, durable: bool) -> RobustExchange:
+    async def create_exchange(self, name: str, type: str, durable: bool) -> None:
         if not self._channel:
             raise Exception("Channel is not open")
         
         self._exchange[name] = await self._channel.declare_exchange(name, type=type, durable=durable)
 
-    async def create_queue(self, name: str, exchange_name: str, routing_key: str, durable: bool = True) -> RobustQueue:
+    async def create_queue(self, queue_name: str, exchange_name: str, routing_key: str, durable: bool = True) -> None:
         if not self._channel:
             raise Exception("Channel is not open")
-        
-        queue = await self._channel.declare_queue(name, durable=durable)
-
         if self._exchange[exchange_name] is None:
             raise Exception("Exchange is not open")
         
-        await queue.bind(self._exchange[exchange_name], routing_key=routing_key)
-
-        self._queue[name] = queue
+        self._queue[queue_name] = await self._channel.declare_queue(queue_name, durable=durable)
+        
+        await self._queue[queue_name].bind(self._exchange[exchange_name], routing_key=routing_key)
     
     async def consume(self, queue_name: str, callback: callable) -> None:
         if not self._channel:
             raise Exception("Channel is not open")
         
-        await self._queue[queue_name].consume(callback)
+        await self._queue[queue_name].consume(lambda message: _on_message(message, callback))
+    
+        async def _on_message(message: IncomingMessage, callback: callable) -> None:
+            async with message.process():
+                await callback(json.loads(message.body))
 
     async def publish(self, exchange_name: str, routing_key: str, message: dict) -> None:
         if not self._channel:
