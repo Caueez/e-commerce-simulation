@@ -2,6 +2,21 @@
 
 
 services:
+  api-gateway:
+    build: ./services/api-gateway
+    develop:
+      watch:
+        - path: ./services/api-gateway
+          action: sync+restart
+          target: /app
+          ignore:
+           - ./services/api-gateway/Dockerfile
+        - path: ./services/api-gateway/Dockerfile
+          action: rebuild
+    ports:
+      - "8080:8080"
+    environment:
+      API_GATEWAY_LOG_LEVEL: debug
 
   postgres:
     image: postgres:14-alpine
