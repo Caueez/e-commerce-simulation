@@ -12,4 +12,5 @@ dependencies = [
     "aio-pika",
     "pytest",
     "redis>=7.1.1",
+    "asyncpg>=0.31.0",
 ]
