@@ -11,3 +11,10 @@ services:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin
       RABBITMQ_LOGS: debug
+  
+  redis:
+    image: redis:6.2.6-alpine
+    ports:
+      - "6379:6379"
+    environment:
+      REDIS_LOG_LEVEL: debug
