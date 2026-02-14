@@ -1,5 +1,5 @@
 
-from messaging.interface.messagering import MessageringInterface
+from infra.messaging.interface.messagering import MessageringInterface
 
 
 class Publisher:

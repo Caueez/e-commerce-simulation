@@ -4,7 +4,7 @@ import aio_pika
 
 from aio_pika import IncomingMessage, Message, RobustConnection, RobustChannel, RobustExchange, RobustQueue, AMQPException
 
-from messaging.interface.messagering import MessageringInterface
+from infra.messaging.interface.messagering import MessageringInterface
 
 
 class RabbitMQ(MessageringInterface):
@@ -18,9 +18,9 @@ class RabbitMQ(MessageringInterface):
     async def connect(self) -> None:
         while True:
             try:
-                if self._connection is not None:
-                    print("Connection already open, closing connection...")
-                    await self._connection.close()
+                if self._connection:
+                    print("Connection already open, skipping...")
+                    break
 
                 self._connection = await aio_pika.connect_robust(self._url)
                 break
@@ -30,6 +30,7 @@ class RabbitMQ(MessageringInterface):
     
     async def close(self) -> None:
         await self._connection.close()
+        self._connection = None
 
     async def create_channel(self, qos: int = 10) -> None:
         if self._connection is None:
