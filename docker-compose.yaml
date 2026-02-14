@@ -3,7 +3,11 @@
 
 services:
   api-gateway:
-    build: ./services/api-gateway
+    build:
+      context: .
+      dockerfile: ./services/api-gateway/Dockerfile
+    env_file:
+      - ./services/api-gateway/.env
     develop:
       watch:
         - path: ./services/api-gateway
@@ -15,8 +19,11 @@ services:
           action: rebuild
     ports:
       - "8080:8080"
-    environment:
-      API_GATEWAY_LOG_LEVEL: debug
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+
 
   postgres:
     image: postgres:14-alpine
