@@ -1,8 +1,0 @@
-README.md
-pyproject.toml
-src/account_service/app.py
-src/api_gateway.egg-info/PKG-INFO
-src/api_gateway.egg-info/SOURCES.txt
-src/api_gateway.egg-info/dependency_links.txt
-src/api_gateway.egg-info/requires.txt
-src/api_gateway.egg-info/top_level.txt

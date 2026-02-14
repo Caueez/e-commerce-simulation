@@ -2,9 +2,12 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
+COPY core ./core
+COPY infra ./infra
+COPY services/api-gateway ./services/api-gateway
+COPY pyproject.toml uv.lock ./ 
 
-COPY src ./src
+ENV PYTHONPATH=/app/services/api-gateway/src:/app
 
 RUN pip install uv && uv sync
 
