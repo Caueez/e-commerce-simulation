@@ -1,0 +1,16 @@
+services:
+  api-gateway:
+    build: .
+    develop:
+      watch:
+        - path: .
+          action: sync+restart
+          target: /app
+          ignore:
+           - Dockerfile
+        - path: Dockerfile
+          action: rebuild
+    ports:
+      - "8080:8080"
+    environment:
+      API_GATEWAY_LOG_LEVEL: debug
