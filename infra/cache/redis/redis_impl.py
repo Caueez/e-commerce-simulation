@@ -1,7 +1,7 @@
 
 from redis.asyncio import Redis
 
-from cache.interface.cache import CacheInterface
+from infra.cache.interface.cache import CacheInterface
 
 
 class RedisCache(CacheInterface):

@@ -1,0 +1,37 @@
+[project]
+name = "infra"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.13"
+
+dependencies = [
+    "pydantic",
+    "aio-pika",
+    "redis>=7.1.1",
+    "asyncpg>=0.31.0"
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "pytest"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I"]
+
+[tool.mypy]
+strict = true
+
+[tool.uv]
+package = true

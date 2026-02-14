@@ -13,7 +13,7 @@ from infra.messaging.types import BuildSchema, ConsumerType, ExchangeType, Publi
 class Handler:
     @staticmethod
     async def handle(message: dict) -> None:
-        print("Received message :", message.get("id"))
+        print("Received message :", message.get("message"))
 
 
 schema = BuildSchema(
@@ -60,16 +60,14 @@ schema = BuildSchema(
     ])
 
 class MessageringRegistry:
-    def __init__(self) -> None:
+    def __init__(self, messagering: MessageringInterface) -> None:
+        self.messagering = messagering
         self._builder : MessageringBuilder = None
-        self.messagering : MessageringInterface = None
         self._factory : MessageringFactory = None
-        self.consumers : list[Consumer] = []
-        self.publishers : list[Publisher] = []
+        self.consumers : dict[str, Consumer] = []
+        self.publishers : dict[str, Publisher] = []
 
     async def build(self) -> None:
-        self.messagering = RabbitMQ("ampq://admin:admin@localhost:5672/")
-
         self._builder = MessageringBuilder(schema, self.messagering)
         await self._builder.build()
 
@@ -77,4 +75,19 @@ class MessageringRegistry:
 
         self.consumers = self._factory.create_consumer()
         self.publishers = self._factory.create_publisher()
+
+        for con in self.consumers.values(): 
+            await con.consume()
+    
+    async def publisher(self, routing_key: str) -> Publisher:
+        if routing_key not in self.publishers.keys():
+            raise Exception("Routing_key not found")
+        
+        return self.publishers[routing_key]
+
+    async def consumer(self, queue_name: str) -> Consumer:
+        if queue_name not in self.consumers.keys():
+            raise Exception("Queue not found")
+        
+        return self.consumers[queue_name]
     

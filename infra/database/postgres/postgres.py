@@ -5,7 +5,7 @@ from infra.database.interface.database import DatabaseInterface
 
 
 class PostgresDatabase(DatabaseInterface):
-    def __init__(self, host: str, port: int, user: str, password: str, dbname: str) -> None:
+    def __init__(self, host: str, port: str, user: str, password: str, dbname: str) -> None:
         self._dsn = f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
         self._pool : Optional[asyncpg.Pool] = None
 
