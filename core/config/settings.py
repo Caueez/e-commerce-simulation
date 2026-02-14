@@ -4,7 +4,8 @@ class Settings(BaseSettings):
 
     model_config = {
         "env_file": ".env",
-        "env_file_encoding": "utf-8"
+        "env_file_encoding": "utf-8",
+        "env_nested_delimiter": "__",
     }
 
     SERVICE_NAME: str
