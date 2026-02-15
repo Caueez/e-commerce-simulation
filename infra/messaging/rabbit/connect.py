@@ -45,7 +45,7 @@ class RabbitMQ(MessageringInterface):
         
         self._exchange[name] = await self._channel.declare_exchange(name, type=type, durable=durable)
 
-    async def create_queue(self, queue_name: str, exchange_name: str, routing_key: str, durable: bool = True) -> None:
+    async def create_queue(self, queue_name: str, exchange_name: str, bindings: list[str], durable: bool = True) -> None:
         if not self._channel:
             raise Exception("Channel is not open")
         if self._exchange[exchange_name] is None:
@@ -53,17 +53,18 @@ class RabbitMQ(MessageringInterface):
         
         self._queue[queue_name] = await self._channel.declare_queue(queue_name, durable=durable)
         
-        await self._queue[queue_name].bind(self._exchange[exchange_name], routing_key=routing_key)
+        for routing_key in bindings:
+            await self._queue[queue_name].bind(self._exchange[exchange_name], routing_key=routing_key)
     
-    async def consume(self, queue_name: str, callback: callable) -> None:
+    async def consume(self, queue_name: str, callbacks: dict[str, callable]) -> None:
         if not self._channel:
             raise Exception("Channel is not open")
         
-        await self._queue[queue_name].consume(lambda message: _on_message(message, callback))
+        await self._queue[queue_name].consume(lambda message: _on_message(message, callbacks))
     
-        async def _on_message(message: IncomingMessage, callback: callable) -> None:
+        async def _on_message(message: IncomingMessage, callbacks: dict[str, callable]) -> None:
             async with message.process():
-                await callback(json.loads(message.body))
+                await callbacks[message.routing_key](json.loads(message.body))
 
     async def publish(self, exchange_name: str, routing_key: str, message: dict) -> None:
         if not self._channel:
