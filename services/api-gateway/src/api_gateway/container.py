@@ -1,18 +1,67 @@
 
+from api_gateway.settings import ApiGatewaySettings
 
 from infra.cache.redis.redis_impl import RedisCache
+
 from infra.database.postgres.postgres import PostgresDatabase
-from infra.messaging.rabbit.connect import RabbitMQ
+
 from infra.messaging.registry import MessageringRegistry
-from api_gateway.settings import ApiGatewaySettings
+from infra.messaging.bootstrap import MessageringBootstrap
+from infra.messaging.types import BuildSchema, ConsumerType, ExchangeType, PublisherType, QueueType
+
+
+class Handler:
+    @staticmethod
+    async def handle(message: dict) -> None:
+        print("Handler 1 :", message.get("message"))
+    
+    @staticmethod
+    async def handle_2(message: dict) -> None:
+        print("Handler 2 :", message.get("message"))
+
+
+schema = BuildSchema(
+    exchanges=[
+        ExchangeType(
+            exchange_name="exchange",
+            exchange_type="direct",
+            durable=True
+        )
+    ],
+    queues=[
+        QueueType(
+            queue_name="queue",
+            exchange_name="exchange",
+            bindings=["routing_key", "routing_key_2"],
+            durable=True
+        ),
+    ],
+    consumers=[
+        ConsumerType(
+            queue_name="queue",
+            callbacks={
+                "routing_key": Handler.handle,
+                "routing_key_2": Handler.handle_2
+            }
+        )
+    ],
+    publishers=[
+        PublisherType(
+            exchange_name="exchange",
+            routing_key="routing_key"
+        ),
+        PublisherType(
+            exchange_name="exchange",
+            routing_key="routing_key_2"
+        ),
+    ])
 
 
 class AppContainer:
     def __init__(self) -> None:
         self.settings = ApiGatewaySettings()
 
-        self.messagering = RabbitMQ(self.settings.MESSAGERING_ENV.url)
-        self.msg_registry = MessageringRegistry(self.messagering)
+        self.msg_bootstrap = MessageringBootstrap(self.settings.MESSAGERING_ENV.url, schema)
 
         self.cache = RedisCache(
             self.settings.CACHE_ENV.host, 
@@ -28,10 +77,10 @@ class AppContainer:
         )
 
     async def bootstrap(self):
-        await self.msg_registry.build()
+        self.msg_registry = await self.msg_bootstrap.start()
         await self.cache.build()
         await self.repo.connect()
     
     async def shutdown(self):
         await self.repo.close()
-        await self.messagering.close()
+        await self.msg_bootstrap.close()
