@@ -12,14 +12,14 @@ class ExchangeType:
 class QueueType:
     queue_name: str
     exchange_name: str
-    routing_key: str
+    bindings: list[str]
     durable: bool
 
 
 @dataclass(frozen=True)
 class ConsumerType:
     queue_name: str
-    callback: callable
+    callbacks: dict[str, callable]
 
 
 @dataclass(frozen=True)
