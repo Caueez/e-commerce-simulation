@@ -7,7 +7,7 @@ router = APIRouter(prefix="/ping", tags=["Ping"])
 @router.get("/pub1")
 async def ping(request: Request):
 
-    publisher = await request.app.state.container.msg_registry.publisher("routing_key")
+    publisher = request.app.state.container.msg_registry.get_publisher("routing_key")
 
     await publisher.publish({"message": "pub1"})
 
@@ -16,7 +16,7 @@ async def ping(request: Request):
 @router.get("/pub2")
 async def ping(request: Request):
 
-    publisher = await request.app.state.container.msg_registry.publisher("routing_key_2")
+    publisher = request.app.state.container.msg_registry.get_publisher("routing_key_2")
 
     await publisher.publish({"message": "pub2"})
 
