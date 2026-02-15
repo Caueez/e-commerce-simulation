@@ -1,4 +1,5 @@
 
+from dataclasses import asdict
 from infra.messaging.interface.messagering import MessageringInterface
 
 
@@ -19,5 +20,5 @@ class Publisher:
 
 
     async def publish(self, message: dict) -> None:
-        await self._menssagering.publish(self.exchange_name, self.routing_key, message)
+        await self._menssagering.publish(self.exchange_name, self.routing_key, asdict(message))
     
