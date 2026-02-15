@@ -1,25 +1,19 @@
 
+import asyncio
+from dataclasses import asdict
+
 from api_gateway.settings import ApiGatewaySettings
 
 from infra.cache.redis.redis_impl import RedisCache
 
 from infra.database.postgres.postgres import PostgresDatabase
 
-from infra.messaging.registry import MessageringRegistry
 from infra.messaging.bootstrap import MessageringBootstrap
-from infra.messaging.types import BuildSchema, ConsumerType, ExchangeType, PublisherType, QueueType
+from infra.messaging.types import BuildSchema, ExchangeType, QueueType
 
+from api_gateway.contracts.account import AccountRespondedEvent, AccountResponsePayload
 from api_gateway.use_cases.create_account import CreateAccountUseCase
-
-
-class Handler:
-    @staticmethod
-    async def handle(message: dict) -> None:
-        print("Handler 1 :", message)
-    
-    @staticmethod
-    async def handle_2(message: dict) -> None:
-        print("Handler 2 :", message)
+from api_gateway.use_cases.get_account import GetAccountUseCase
 
 
 schema = BuildSchema(
@@ -32,34 +26,59 @@ schema = BuildSchema(
     ],
     queues=[
         QueueType(
-            queue_name="queue",
+            queue_name="account",
             exchange_name="exchange",
-            bindings=["routing_key", "routing_key_2"],
+            bindings=[
+                "account.request", 
+                "account.response", 
+                "account.created", 
+                "account.updated", 
+                "account.deleted"
+                ],
             durable=True
-        ),
-    ],
-    consumers=[
-        ConsumerType(
-            queue_name="queue",
-            callbacks={
-                "routing_key": Handler.handle,
-                "routing_key_2": Handler.handle_2
-            }
-        )
-    ],
-    publishers=[
-        PublisherType(
-            exchange_name="exchange",
-            routing_key="routing_key"
-        ),
-        PublisherType(
-            exchange_name="exchange",
-            routing_key="routing_key_2"
         ),
     ])
 
-class AppContainer:
 
+class Handler:
+    def __init__(self, container: "AppContainer") -> None:
+        self.container = container
+
+    async def handle_account_created(self, payload: dict):
+        print(payload)
+
+    async def handle_account_request(self, payload: dict):
+        request_payload = payload.get("payload", {})
+        correlation_id = payload.get("correlation_id")
+
+        if not correlation_id:
+            return
+
+        # Consumer local para demonstrar RPC sem alterar outros serviços.
+        response = AccountRespondedEvent(
+            correlation_id=correlation_id,
+            payload=AccountResponsePayload(
+                id=request_payload.get("id", ""),
+                name="Mock Account",
+                email="mock-account@email.com",
+            ),
+        )
+
+        await self.container.bus.publish(asdict(response))
+
+    async def handle_account_response(self, payload: dict):
+        correlation_id = payload.get("correlation_id")
+
+        if not correlation_id:
+            return
+
+        future = self.container.pending_requests.get(correlation_id)
+        if not future or future.done():
+            return
+
+        future.set_result(payload)
+
+class AppContainer:
     def __init__(self) -> None:
         self.settings = ApiGatewaySettings()
 
@@ -77,13 +96,23 @@ class AppContainer:
             self.settings.DB_ENV.password, 
             self.settings.DB_ENV.dbname
         )
+        self.pending_requests: dict[str, asyncio.Future] = {}
+        self._handler = Handler(self)
 
     async def bootstrap(self):
-        self.msg_registry = await self.msg_bootstrap.start()
+        self.bus = await self.msg_bootstrap.start()
         await self.cache.build()
         await self.repo.connect()
 
-        self.create_account_use_case = CreateAccountUseCase(self.repo, self.msg_registry)
+        handlers = {
+            "account.created": self._handler.handle_account_created,
+            "account.request": self._handler.handle_account_request,
+            "account.response": self._handler.handle_account_response,
+        }
+        await self.bus.consume("account", handlers) 
+
+        self.create_account_use_case = CreateAccountUseCase(self.bus)
+        self.get_account_use_case = GetAccountUseCase(self.bus, self.pending_requests)
     
     async def shutdown(self):
         await self.repo.close()

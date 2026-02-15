@@ -1,46 +1,28 @@
 
+from dataclasses import asdict
 
-import json
-import uuid
-
-from infra.database.repository import DatabaseRepository
-from infra.messaging.registry import MessageringRegistry
+from infra.messaging.interface.messagering import MessageringInterface
 
 import hashlib
 # hashlib.scrypt(password.encode("utf-8"), salt=password.encode("utf-8"), n=2**14, r=8, p=1, dklen=32).hex()
 
-from dataclasses import dataclass
-
-
-@dataclass
-class AccountCreatedPayload:
-    name: str
-    email: str
-    password: str
-
-@dataclass
-class AccountCreatedEvent:
-    idempotency_key: str
-    payload: AccountCreatedPayload
-
-
+from api_gateway.contracts.account import AccountCreatedEvent, AccountCreatedPayload
 
 class CreateAccountUseCase:
-    def __init__(self, repo, msg_registry) -> None:
-        self.repo : DatabaseRepository = repo
-        self.msg_registry : MessageringRegistry = msg_registry
+    def __init__(self, bus) -> None:
+        self.bus : MessageringInterface = bus
 
-    
     async def execute(self, name: str, email: str, password: str):
 
         event = AccountCreatedEvent(
-            idempotency_key=str(uuid.uuid4()),
-            payload=AccountCreatedPayload(name, email, password)
+            idempotency_key=hashlib.sha256(email.encode()).hexdigest(),
+            payload=AccountCreatedPayload(
+                name=name, 
+                email=email, 
+                password=password
+                )
             )
 
-
-        await self.msg_registry.get_publisher("routing_key").publish(
-            event
-            )
+        await self.bus.publish(asdict(event))
         
         return {"message": "Account created"}
