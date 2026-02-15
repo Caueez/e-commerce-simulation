@@ -10,10 +10,9 @@ async def lifespan(app: FastAPI):
     print("API Gateway is starting...")
 
     container = AppContainer()
-    await container.bootstrap()
+    await container.bootstrap()    
 
     app.state.container = container
-    
     
     yield
     print("API Gateway is shutting down...")

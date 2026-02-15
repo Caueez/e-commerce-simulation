@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 
-from api_gateway.routes.ping import router as ping_router
+from api_gateway.routes.account import router as ping_router
 
 
 router = APIRouter(prefix="/api/v1")
