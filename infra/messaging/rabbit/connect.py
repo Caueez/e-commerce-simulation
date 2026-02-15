@@ -48,36 +48,44 @@ class RabbitMQ(MessageringInterface):
     async def create_queue(self, queue_name: str, exchange_name: str, bindings: list[str], durable: bool = True) -> None:
         if not self._channel:
             raise Exception("Channel is not open")
-        if self._exchange[exchange_name] is None:
+        exchange = self._exchange.get(exchange_name)
+        if exchange is None:
             raise Exception("Exchange is not open")
         
         self._queue[queue_name] = await self._channel.declare_queue(queue_name, durable=durable)
         
         for routing_key in bindings:
-            await self._queue[queue_name].bind(self._exchange[exchange_name], routing_key=routing_key)
+            await self._queue[queue_name].bind(exchange, routing_key=routing_key)
     
     async def consume(self, queue_name: str, callbacks: dict[str, callable]) -> None:
         if not self._channel:
             raise Exception("Channel is not open")
-        
-        await self._queue[queue_name].consume(lambda message: _on_message(message, callbacks))
-    
+
+        queue = self._queue.get(queue_name)
+        if queue is None:
+            raise Exception("Queue is not open")
+
         async def _on_message(message: IncomingMessage, callbacks: dict[str, callable]) -> None:
             async with message.process():
-                await callbacks[message.routing_key](json.loads(message.body))
+                callback = callbacks.get(message.routing_key)
+                if callback is None:
+                    return
+                await callback(json.loads(message.body))
 
-    async def publish(self, exchange_name: str, routing_key: str, message: dict) -> None:
+        await queue.consume(lambda message: _on_message(message, callbacks))
+
+    async def publish(self, event: dict) -> None:
         if not self._channel:
             raise Exception("Channel is not open")
-        
-        if self._exchange[exchange_name] is None:
+
+        exchange = self._exchange.get(event.get("exchange_name"))
+        if exchange is None:
             raise Exception("Exchange is not open")
         
         message = Message(
-            json.dumps(message).encode("utf-8"),
+            json.dumps(event).encode("utf-8"),
             delivery_mode=aio_pika.DeliveryMode.PERSISTENT
         )
         
-        await self._exchange[exchange_name].publish(message=message, routing_key=routing_key)
-
+        await exchange.publish(message=message, routing_key=event.get("routing_key"))
 

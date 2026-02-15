@@ -2,7 +2,7 @@
 
 
 from infra.messaging.builder import MessageringBuilder
-from infra.messaging.registry import MessageringRegistry
+from infra.messaging.interface.messagering import MessageringInterface
 from infra.messaging.rabbit.connect import RabbitMQ
 from infra.messaging.types import BuildSchema
 
@@ -16,21 +16,10 @@ class MessageringBootstrap:
     async def close(self) -> None:
         await self._messagering.close()
 
-    async def start(self) -> MessageringRegistry:
+    async def start(self) -> MessageringInterface:
         self._messagering = RabbitMQ(self._url)
-        registry = MessageringRegistry(self._messagering)
         builder = MessageringBuilder(self._schema, self._messagering)
 
         await builder.build()
 
-        consumers = builder.create_consumer()
-        publishers = builder.create_publisher()
-
-        for key, consumer in consumers.items():
-            await consumer.consume()
-            registry.set_consumer(key, consumer)
-
-        for key, publisher in publishers.items():
-            registry.set_publisher(key, publisher)
-
-        return registry
+        return self._messagering

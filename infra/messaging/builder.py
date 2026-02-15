@@ -2,8 +2,6 @@
 from infra.messaging.types import BuildSchema
 
 from infra.messaging.interface.messagering import MessageringInterface
-from infra.messaging.publisher import Publisher
-from infra.messaging.consumer import Consumer
 
 
 class MessageringBuilder:
@@ -27,17 +25,3 @@ class MessageringBuilder:
     async def _create_queue(self) -> None:
         for queue in self.schema.queues:
             await self.messagering.create_queue(queue.queue_name, queue.exchange_name, queue.bindings, durable=queue.durable)
-    
-    def create_publisher(self) -> dict[str, Publisher]:
-        return {
-            pub.routing_key:
-            Publisher(self.messagering, pub.exchange_name, pub.routing_key) 
-            for pub in self.schema.publishers
-        }
-    
-    def create_consumer(self) -> dict[str, Consumer]:
-        return {
-            con.queue_name:
-            Consumer(self.messagering, con.queue_name, con.callbacks) 
-            for con in self.schema.consumers 
-        }

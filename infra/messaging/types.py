@@ -16,21 +16,7 @@ class QueueType:
     durable: bool
 
 
-@dataclass(frozen=True)
-class ConsumerType:
-    queue_name: str
-    callbacks: dict[str, callable]
-
-
-@dataclass(frozen=True)
-class PublisherType:
-    exchange_name: str
-    routing_key: str
-
-
 @dataclass
 class BuildSchema:
     exchanges: list[ExchangeType]
     queues: list[QueueType]
-    consumers: list[ConsumerType]
-    publishers: list[PublisherType]
