@@ -9,15 +9,17 @@ from infra.messaging.registry import MessageringRegistry
 from infra.messaging.bootstrap import MessageringBootstrap
 from infra.messaging.types import BuildSchema, ConsumerType, ExchangeType, PublisherType, QueueType
 
+from api_gateway.use_cases.create_account import CreateAccountUseCase
+
 
 class Handler:
     @staticmethod
     async def handle(message: dict) -> None:
-        print("Handler 1 :", message.get("message"))
+        print("Handler 1 :", message)
     
     @staticmethod
     async def handle_2(message: dict) -> None:
-        print("Handler 2 :", message.get("message"))
+        print("Handler 2 :", message)
 
 
 schema = BuildSchema(
@@ -56,8 +58,8 @@ schema = BuildSchema(
         ),
     ])
 
-
 class AppContainer:
+
     def __init__(self) -> None:
         self.settings = ApiGatewaySettings()
 
@@ -80,6 +82,8 @@ class AppContainer:
         self.msg_registry = await self.msg_bootstrap.start()
         await self.cache.build()
         await self.repo.connect()
+
+        self.create_account_use_case = CreateAccountUseCase(self.repo, self.msg_registry)
     
     async def shutdown(self):
         await self.repo.close()
